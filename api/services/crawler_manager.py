@@ -224,12 +224,16 @@ class CrawlerManager:
 
         cmd.extend(["--get_comment", "true" if config.enable_comments else "false"])
         cmd.extend(["--get_sub_comment", "true" if config.enable_sub_comments else "false"])
+        cmd.extend(["--get_medias", "true" if config.enable_get_medias else "false"])
 
         if config.max_notes_count is not None:
             cmd.extend(["--crawler_max_notes_count", str(config.max_notes_count)])
 
         if config.max_comments_count is not None:
             cmd.extend(["--max_comments_count_singlenotes", str(config.max_comments_count)])
+
+        if config.save_data_path:
+            cmd.extend(["--save_data_path", config.save_data_path])
 
         if config.cookies:
             cmd.extend(["--cookies", config.cookies])

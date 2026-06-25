@@ -84,61 +84,69 @@ async def health_check():
 @app.get("/api/env/check")
 async def check_environment():
     """Check if MediaCrawler environment is configured correctly"""
-    try:
-        # Run uv run main.py --help command to check environment
-        if sys.platform == "win32":
-            loop = asyncio.get_running_loop()
-            process = await loop.run_in_executor(
-                None,
-                lambda: subprocess.run(
-                    ["uv", "run", "main.py", "--help"],
-                    capture_output=True,
-                    timeout=30.0,
-                    cwd="."
-                )
+    loop = asyncio.get_running_loop()
+
+    def _run_check():
+        """Run environment check in thread to avoid asyncio subprocess issues on Windows."""
+        # 1. Check if uv is available
+        try:
+            uv_check = subprocess.run(
+                ["uv", "--version"],
+                capture_output=True,
+                timeout=10.0,
             )
-            stdout, stderr = process.stdout, process.stderr  # bytes
+            uv_available = uv_check.returncode == 0
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            uv_available = False
+
+        # 2. Build command list
+        if uv_available:
+            cmd_list = ["uv", "run", "main.py", "--help"]
         else:
-            process = await asyncio.create_subprocess_exec(
-                "uv", "run", "main.py", "--help",
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                cwd="."  # Project root directory
+            cmd_list = [sys.executable, "main.py", "--help"]
+
+        # 3. Run the check
+        try:
+            result = subprocess.run(
+                cmd_list,
+                capture_output=True,
+                timeout=30.0,
+                cwd=".",
             )
-            stdout, stderr = await asyncio.wait_for(
-                process.communicate(),
-                timeout=30.0  # 30 seconds timeout
-            )
-        if process.returncode == 0:
+        except subprocess.TimeoutExpired:
+            return {
+                "success": False,
+                "message": "Environment check timeout",
+                "error": "Command execution exceeded 30 seconds",
+            }
+        except FileNotFoundError:
+            return {
+                "success": False,
+                "message": "Runtime not found",
+                "error": f"Command not found: {cmd_list[0]}",
+            }
+
+        if result.returncode == 0:
             return {
                 "success": True,
                 "message": "MediaCrawler environment configured correctly",
-                "output": stdout.decode("utf-8", errors="ignore")[:500]  # Truncate to first 500 characters
+                "output": result.stdout.decode("utf-8", errors="ignore")[:500],
             }
         else:
-            error_msg = stderr.decode("utf-8", errors="ignore") or stdout.decode("utf-8", errors="ignore")
+            error_msg = result.stderr.decode("utf-8", errors="ignore") or result.stdout.decode("utf-8", errors="ignore")
             return {
                 "success": False,
                 "message": "Environment check failed",
-                "error": error_msg[:500]
+                "error": error_msg[:500],
             }
-    except asyncio.TimeoutError:
-        return {
-            "success": False,
-            "message": "Environment check timeout",
-            "error": "Command execution exceeded 30 seconds"
-        }
-    except FileNotFoundError:
-        return {
-            "success": False,
-            "message": "uv command not found",
-            "error": "Please ensure uv is installed and configured in system PATH"
-        }
+
+    try:
+        return await loop.run_in_executor(None, _run_check)
     except Exception as e:
         return {
             "success": False,
             "message": "Environment check error",
-            "error": f"{type(e).__name__}: {str(e) or 'Unknown'}"
+            "error": f"{type(e).__name__}: {str(e) or 'Unknown'}",
         }
 
 

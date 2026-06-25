@@ -71,7 +71,9 @@ class CrawlerStartRequest(BaseModel):
     start_page: int = 1
     enable_comments: bool = True
     enable_sub_comments: bool = False
+    enable_get_medias: bool = True  # Whether to download media (video/image) files
     save_option: SaveDataOptionEnum = SaveDataOptionEnum.JSONL
+    save_data_path: str = ""  # Custom data save path, empty means default "data/"
     cookies: str = ""
     headless: bool = False
     max_notes_count: Optional[int] = Field(default=None, ge=1, le=MAX_API_LIMIT_COUNT)

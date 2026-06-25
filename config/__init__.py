@@ -18,5 +18,15 @@
 # 使用本代码即表示您同意遵守上述原则和LICENSE中的所有条款。
 
 
+import os
 from .base_config import *
 from .db_config import *
+
+# 如果配置了 KEYWORDS_FILE 且文件存在，从文件逐行读取关键词
+if KEYWORDS_FILE:
+    keywords_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), KEYWORDS_FILE)
+    if os.path.exists(keywords_path):
+        with open(keywords_path, "r", encoding="utf-8") as f:
+            lines = [line.strip() for line in f if line.strip()]
+        if lines:
+            KEYWORDS = ",".join(lines)  # 转为逗号分隔字符串，兼容现有 split(",") 逻辑

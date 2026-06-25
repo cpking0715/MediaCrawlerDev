@@ -1,17 +1,660 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
+<head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MediaCrawler - Command Center</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script type="module" crossorigin src="/assets/index-DvClRayq.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-OiBmsgXF.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+    <title>MediaCrawler - 控制台</title>
+    <style>
+        :root {
+            --bg: #0f1117;
+            --card-bg: #1a1d27;
+            --border: #2a2d3a;
+            --text: #e1e4ed;
+            --text-muted: #8b8fa8;
+            --primary: #6366f1;
+            --primary-hover: #818cf8;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #3b82f6;
+            --radius: 10px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 0; margin-bottom: 24px; border-bottom: 1px solid var(--border);
+        }
+        header h1 { font-size: 22px; font-weight: 700; }
+        header .status-dot {
+            display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+            margin-right: 8px;
+        }
+        header .status-dot.idle { background: var(--text-muted); }
+        header .status-dot.running { background: var(--success); animation: pulse 1.2s infinite; }
+        header .status-dot.stopping { background: var(--warning); animation: pulse 0.6s infinite; }
+        header .status-dot.error { background: var(--error); }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+        }
+        .status-text { font-size: 13px; color: var(--text-muted); }
+        .status-text .val { color: var(--text); font-weight: 500; }
+
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+        .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .card h2 .icon { font-size: 18px; }
+
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block; font-size: 12px; font-weight: 500;
+            color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        select, input[type="text"], input[type="number"], textarea {
+            width: 100%; padding: 10px 12px;
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); font-size: 14px;
+            font-family: inherit; transition: border-color 0.2s;
+        }
+        select:focus, input:focus, textarea:focus { outline: none; border-color: var(--primary); }
+        textarea { resize: vertical; min-height: 100px; }
+        .form-row { display: flex; gap: 12px; }
+        .form-row > * { flex: 1; }
+
+        .platform-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+        }
+        .platform-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            padding: 12px 8px; border: 1px solid var(--border); border-radius: 8px;
+            background: var(--bg); color: var(--text-muted); cursor: pointer;
+            font-size: 12px; transition: all 0.2s; font-family: inherit;
+        }
+        .platform-btn:hover { border-color: var(--primary); color: var(--text); }
+        .platform-btn.active {
+            border-color: var(--primary); background: rgba(99,102,241,0.1);
+            color: var(--primary); font-weight: 600;
+        }
+        .platform-btn .emoji { font-size: 22px; margin-bottom: 2px; }
+
+        .btn {
+            padding: 10px 20px; border: none; border-radius: 6px;
+            font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; font-family: inherit; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-danger { background: var(--error); color: #fff; }
+        .btn-danger:hover { opacity: 0.85; }
+        .btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-outline {
+            background: transparent; border: 1px solid var(--border); color: var(--text);
+        }
+        .btn-outline:hover { border-color: var(--text-muted); }
+
+        .btn-group { display: flex; gap: 10px; margin-top: 8px; }
+
+        .log-console {
+            background: #0a0c10; border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px; height: 400px;
+            overflow-y: auto; font-family: 'JetBrains Mono', 'Consolas', monospace;
+            font-size: 12px; line-height: 1.6;
+        }
+        .log-line { white-space: pre-wrap; word-break: break-all; }
+        .log-line .ts { color: var(--text-muted); margin-right: 8px; }
+        .log-line.info .msg { color: #a5b4cb; }
+        .log-line.success .msg { color: var(--success); }
+        .log-line.warning .msg { color: var(--warning); }
+        .log-line.error .msg { color: var(--error); }
+        .log-line.debug .msg { color: var(--text-muted); }
+
+        .progress-bar-wrap {
+            height: 6px; background: var(--bg); border-radius: 3px;
+            margin-bottom: 12px; overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%; background: var(--primary);
+            border-radius: 3px; transition: width 0.3s;
+            width: 0%;
+        }
+        .stat-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+        .stat-row .label { color: var(--text-muted); }
+        .stat-row .val { font-weight: 600; }
+
+        .toggle-group { display: flex; gap: 8px; margin-bottom: 14px; }
+        .toggle-btn {
+            flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px;
+            background: var(--bg); color: var(--text-muted); cursor: pointer;
+            font-size: 12px; text-align: center; font-family: inherit; transition: all 0.2s;
+        }
+        .toggle-btn.active {
+            border-color: var(--primary); background: rgba(99,102,241,0.1); color: var(--primary); font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 11px; font-weight: 600;
+        }
+        .badge-success { background: rgba(34,197,94,0.15); color: var(--success); }
+        .badge-warning { background: rgba(245,158,11,0.15); color: var(--warning); }
+        .badge-info { background: rgba(59,130,246,0.15); color: var(--info); }
+
+        .output-info { font-size: 13px; color: var(--text-muted); margin-top: 10px; line-height: 1.8; }
+        .output-info strong { color: var(--text); }
+
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .platform-grid { grid-template-columns: repeat(4, 1fr); }
+            .form-row { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>📡 MediaCrawler 控制台</h1>
+        <div class="status-text">
+            <span class="status-dot idle" id="statusDot"></span>
+            状态: <span class="val" id="statusLabel">空闲</span>
+            &nbsp;|&nbsp; 平台: <span class="val" id="statusPlatform">-</span>
+        </div>
+    </header>
+
+    <div class="grid-2">
+        <!-- 左侧：配置面板 -->
+        <div>
+            <div class="card">
+                <h2><span class="icon">⚙️</span> 爬取配置</h2>
+
+                <div class="form-group">
+                    <label>选择平台</label>
+                    <div class="platform-grid" id="platformGrid"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>爬取模式</label>
+                    <div class="toggle-group" id="crawlerTypeGroup">
+                        <button class="toggle-btn active" data-value="search">🔍 搜索模式</button>
+                        <button class="toggle-btn" data-value="detail">📌 详情模式</button>
+                        <button class="toggle-btn" data-value="creator">👤 创作者模式</button>
+                    </div>
+                </div>
+
+                <div class="form-group" id="keywordsGroup">
+                    <label>关键词列表（每行一个关键词）</label>
+                    <textarea id="keywordsInput" placeholder="每行输入一个关键词，例如：&#10;小米空调&#10;清风纸巾&#10;编程教程"></textarea>
+                </div>
+
+                <div class="form-group" id="specifiedIdsGroup" style="display:none;">
+                    <label>视频/帖子 ID 或 URL（每行一个）</label>
+                    <textarea id="specifiedIdsInput" placeholder="每行一个ID或URL"></textarea>
+                </div>
+
+                <div class="form-group" id="creatorIdsGroup" style="display:none;">
+                    <label>创作者 ID 或主页 URL（每行一个）</label>
+                    <textarea id="creatorIdsInput" placeholder="每行一个ID或主页URL"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>下载视频数量</label>
+                        <input type="number" id="maxNotesCount" value="10" min="1" max="10000" />
+                    </div>
+                    <div class="form-group">
+                        <label>评论数量</label>
+                        <input type="number" id="maxCommentsCount" value="10" min="0" max="10000" />
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>保存位置（留空使用默认 data/ 目录）</label>
+                    <input type="text" id="saveDataPath" placeholder="例如: D:/videos 或留空使用默认路径" />
+                </div>
+
+                <div class="form-group">
+                    <label>选项</label>
+                    <div class="toggle-group">
+                        <button class="toggle-btn active" id="toggleMedia">🎬 下载视频</button>
+                        <button class="toggle-btn active" id="toggleComment">💬 下载评论</button>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="btnStart" onclick="startCrawler()">▶ 开始爬取</button>
+                    <button class="btn btn-danger" id="btnStop" onclick="stopCrawler()" disabled>⏹ 停止</button>
+                </div>
+
+                <div class="output-info" id="outputInfo" style="display:none;">
+                    <div>📁 <strong>元数据位置:</strong> <span id="metaPath">-</span></div>
+                    <div>🎬 <strong>视频位置:</strong> <span id="videoPath">-</span></div>
+                </div>
+            </div>
+
+            <!-- 统计面板 -->
+            <div class="card" style="margin-top: 16px;">
+                <h2><span class="icon">📊</span> 爬取进度</h2>
+                <div class="progress-bar-wrap">
+                    <div class="progress-bar-fill" id="progressBar"></div>
+                </div>
+                <div class="stat-row">
+                    <span class="label">已处理视频</span>
+                    <span class="val" id="statProcessed">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="label">目标总数</span>
+                    <span class="val" id="statTotal">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="label">运行时间</span>
+                    <span class="val" id="statDuration">-</span>
+                </div>
+                <div class="stat-row">
+                    <span class="label">当前关键词</span>
+                    <span class="val" id="statKeyword">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：日志面板 -->
+        <div>
+            <div class="card" style="height: calc(100vh - 120px); display: flex; flex-direction: column;">
+                <h2>
+                    <span class="icon">📋</span> 实时日志
+                    <span style="margin-left: auto; font-size: 12px; font-weight: 400;">
+                        <span id="logCount">0</span> 条
+                    </span>
+                </h2>
+                <div class="log-console" id="logConsole" style="flex:1;">
+                    <div class="log-line info">
+                        <span class="ts">--:--:--</span>
+                        <span class="msg">等待爬取任务启动...</span>
+                    </div>
+                </div>
+                <div style="margin-top: 8px; text-align: right;">
+                    <button class="btn btn-outline" onclick="clearLogs()" style="padding: 4px 12px; font-size: 12px;">清空日志</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===================== 状态管理 =====================
+const state = {
+    platform: 'dy',
+    crawlerType: 'search',
+    enableMedia: true,
+    enableComment: true,
+    ws: null,
+    statusWs: null,
+    startTime: null,
+    processedCount: 0,
+    totalCount: 0,
+    logEntries: [],
+    statusTimer: null,
+};
+
+// ===================== 初始化 =====================
+const platforms = [
+    { value: 'xhs', label: '小红书', emoji: '📕' },
+    { value: 'dy', label: '抖音', emoji: '🎵' },
+    { value: 'ks', label: '快手', emoji: '📹' },
+    { value: 'bili', label: 'B站', emoji: '📺' },
+    { value: 'wb', label: '微博', emoji: '💬' },
+    { value: 'tieba', label: '贴吧', emoji: '📝' },
+    { value: 'zhihu', label: '知乎', emoji: '❓' },
+];
+
+function initPlatformGrid() {
+    const grid = document.getElementById('platformGrid');
+    platforms.forEach(p => {
+        const btn = document.createElement('button');
+        btn.className = 'platform-btn' + (p.value === state.platform ? ' active' : '');
+        btn.innerHTML = `<span class="emoji">${p.emoji}</span>${p.label}`;
+        btn.onclick = () => {
+            document.querySelectorAll('.platform-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.platform = p.value;
+            updateOutputInfo();
+        };
+        grid.appendChild(btn);
+    });
+}
+
+function initToggleGroups() {
+    // 爬取模式切换
+    document.querySelectorAll('#crawlerTypeGroup .toggle-btn').forEach(btn => {
+        btn.onclick = () => {
+            document.querySelectorAll('#crawlerTypeGroup .toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.crawlerType = btn.dataset.value;
+            // 显示/隐藏对应输入框
+            document.getElementById('keywordsGroup').style.display = state.crawlerType === 'search' ? '' : 'none';
+            document.getElementById('specifiedIdsGroup').style.display = state.crawlerType === 'detail' ? '' : 'none';
+            document.getElementById('creatorIdsGroup').style.display = state.crawlerType === 'creator' ? '' : 'none';
+        };
+    });
+
+    // 选项切换
+    document.getElementById('toggleMedia').onclick = function() {
+        this.classList.toggle('active');
+        state.enableMedia = this.classList.contains('active');
+        updateOutputInfo();
+    };
+    document.getElementById('toggleComment').onclick = function() {
+        this.classList.toggle('active');
+        state.enableComment = this.classList.contains('active');
+    };
+}
+
+// ===================== WebSocket 日志 =====================
+function connectWebSocket() {
+    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = location.host;
+
+    // 日志 WebSocket
+    state.ws = new WebSocket(`${protocol}//${host}/api/ws/logs`);
+
+    state.ws.onopen = () => {
+        console.log('[WS] 日志连接已建立');
+        // 定时发送心跳
+        state.pingTimer = setInterval(() => {
+            if (state.ws.readyState === WebSocket.OPEN) {
+                state.ws.send('ping');
+            }
+        }, 25000);
+    };
+
+    state.ws.onmessage = (event) => {
+        try {
+            const log = JSON.parse(event.data);
+            if (log.message === 'pong') return;
+            appendLog(log);
+        } catch (e) {
+            appendLog({ timestamp: '--:--:--', level: 'debug', message: event.data });
+        }
+    };
+
+    state.ws.onclose = () => {
+        console.log('[WS] 日志连接关闭，3秒后重连...');
+        if (state.pingTimer) clearInterval(state.pingTimer);
+        setTimeout(connectWebSocket, 3000);
+    };
+
+    state.ws.onerror = (e) => {
+        console.error('[WS] 日志连接错误:', e);
+    };
+
+    // 状态轮询（使用 HTTP 轮询作为备选，同时连接状态 WS）
+    state.statusWs = new WebSocket(`${protocol}//${host}/api/ws/status`);
+
+    state.statusWs.onmessage = (event) => {
+        try {
+            const status = JSON.parse(event.data);
+            updateStatusUI(status);
+        } catch (e) {}
+    };
+
+    state.statusWs.onclose = () => {
+        setTimeout(() => {
+            state.statusWs = new WebSocket(`${protocol}//${host}/api/ws/status`);
+            state.statusWs.onmessage = state.statusWs._onMsg || ((e) => {
+                try { updateStatusUI(JSON.parse(e.data)); } catch (_) {}
+            });
+        }, 3000);
+    };
+}
+
+// ===================== 日志处理 =====================
+function appendLog(log) {
+    state.logEntries.push(log);
+    const console = document.getElementById('logConsole');
+    const line = document.createElement('div');
+    line.className = `log-line ${log.level || 'info'}`;
+    line.innerHTML = `<span class="ts">${log.timestamp || '--:--:--'}</span><span class="msg">${escapeHtml(log.message || '')}</span>`;
+    console.appendChild(line);
+    console.scrollTop = console.scrollHeight;
+
+    // 更新日志计数
+    document.getElementById('logCount').textContent = state.logEntries.length;
+
+    // 解析日志更新进度
+    parseProgress(log.message);
+}
+
+function clearLogs() {
+    state.logEntries = [];
+    document.getElementById('logConsole').innerHTML = '';
+    document.getElementById('logCount').textContent = '0';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// ===================== 进度解析 =====================
+function parseProgress(msg) {
+    // 匹配 "keyword:xxx" 更新当前关键词
+    const kwMatch = msg.match(/Current keyword:\s*(.+)/) || msg.match(/keyword:\s*(\S+)/);
+    if (kwMatch) {
+        document.getElementById('statKeyword').textContent = kwMatch[1];
+    }
+
+    // 匹配 "aweme_list:[" 统计已处理数量
+    const listMatch = msg.match(/aweme_list:\[(.+?)\]/);
+    if (listMatch) {
+        const ids = listMatch[1].split(',').map(s => s.trim().replace(/['"]/g, '')).filter(Boolean);
+        state.processedCount += ids.length;
+        document.getElementById('statProcessed').textContent = state.processedCount;
+        updateProgressBar();
+    }
+
+    // 匹配单个 aweme 处理
+    if (msg.includes('[DouYinCrawler.search]') && msg.includes('page:')) {
+        // 每页约10个
+    }
+
+    // 匹配完成
+    if (msg.includes('Crawler completed') || msg.includes('finished')) {
+        document.getElementById('progressBar').style.width = '100%';
+    }
+}
+
+function updateProgressBar() {
+    const total = parseInt(document.getElementById('maxNotesCount').value) || 10;
+    const keywords = document.getElementById('keywordsInput').value.split('\n').filter(k => k.trim()).length || 1;
+    state.totalCount = total * keywords;
+    document.getElementById('statTotal').textContent = state.totalCount;
+    const pct = Math.min(100, Math.round((state.processedCount / state.totalCount) * 100));
+    document.getElementById('progressBar').style.width = pct + '%';
+}
+
+// ===================== 状态 UI =====================
+function updateStatusUI(status) {
+    const dot = document.getElementById('statusDot');
+    const label = document.getElementById('statusLabel');
+    const platform = document.getElementById('statusPlatform');
+    const btnStart = document.getElementById('btnStart');
+    const btnStop = document.getElementById('btnStop');
+
+    dot.className = 'status-dot ' + (status.status || 'idle');
+    label.textContent = status.status === 'running' ? '运行中' :
+                        status.status === 'stopping' ? '停止中' :
+                        status.status === 'error' ? '错误' : '空闲';
+    platform.textContent = status.platform || '-';
+
+    if (status.status === 'running') {
+        btnStart.disabled = true;
+        btnStop.disabled = false;
+        if (!state.startTime) {
+            state.startTime = new Date();
+            startDurationTimer();
+        }
+    } else {
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+        if (status.status === 'idle') {
+            state.startTime = null;
+            stopDurationTimer();
+        }
+    }
+}
+
+function startDurationTimer() {
+    stopDurationTimer();
+    state.statusTimer = setInterval(() => {
+        if (!state.startTime) return;
+        const elapsed = Math.floor((new Date() - state.startTime) / 1000);
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        document.getElementById('statDuration').textContent = `${mins}分${secs}秒`;
+    }, 1000);
+}
+
+function stopDurationTimer() {
+    if (state.statusTimer) {
+        clearInterval(state.statusTimer);
+        state.statusTimer = null;
+    }
+    document.getElementById('statDuration').textContent = '-';
+}
+
+// ===================== 保存路径显示 =====================
+function updateOutputInfo() {
+    const savePath = document.getElementById('saveDataPath').value.trim();
+    const platform = state.platform;
+    const media = state.enableMedia;
+
+    const info = document.getElementById('outputInfo');
+    if (!media) {
+        info.style.display = 'none';
+        return;
+    }
+
+    info.style.display = '';
+    const basePath = savePath || 'data';
+
+    const platformNames = { dy: 'douyin', xhs: 'xhs', ks: 'kuaishou', bili: 'bilibili', wb: 'weibo', tieba: 'tieba', zhihu: 'zhihu' };
+    const pName = platformNames[platform] || platform;
+
+    document.getElementById('metaPath').textContent = `${basePath}/${pName}/search/`;
+    document.getElementById('videoPath').textContent = `${basePath}/${pName}/videos/{视频ID}/video.mp4`;
+}
+
+// ===================== 爬取控制 =====================
+async function startCrawler() {
+    const keywords = document.getElementById('keywordsInput').value.trim();
+    const specifiedIds = document.getElementById('specifiedIdsInput').value.trim();
+    const creatorIds = document.getElementById('creatorIdsInput').value.trim();
+    const maxNotes = parseInt(document.getElementById('maxNotesCount').value) || 20;
+    const maxComments = parseInt(document.getElementById('maxCommentsCount').value) || 10;
+    const savePath = document.getElementById('saveDataPath').value.trim();
+
+    // 验证
+    if (state.crawlerType === 'search' && !keywords) {
+        alert('请输入至少一个关键词！');
+        return;
+    }
+    if (state.crawlerType === 'detail' && !specifiedIds) {
+        alert('请输入至少一个视频ID或URL！');
+        return;
+    }
+    if (state.crawlerType === 'creator' && !creatorIds) {
+        alert('请输入至少一个创作者ID或URL！');
+        return;
+    }
+
+    // 重置状态
+    state.processedCount = 0;
+    state.totalCount = maxNotes * (keywords ? keywords.split('\n').filter(k => k.trim()).length : 1);
+    document.getElementById('statProcessed').textContent = '0';
+    document.getElementById('statTotal').textContent = state.totalCount;
+    document.getElementById('progressBar').style.width = '0%';
+    document.getElementById('statKeyword').textContent = '-';
+    document.getElementById('statDuration').textContent = '-';
+    state.startTime = new Date();
+    startDurationTimer();
+    clearLogs();
+
+    // 转换关键词：每行一个 -> 逗号分隔
+    const kwList = keywords.split('\n').map(k => k.trim()).filter(Boolean);
+    const idList = specifiedIds.split('\n').map(k => k.trim()).filter(Boolean);
+    const creatorList = creatorIds.split('\n').map(k => k.trim()).filter(Boolean);
+
+    const body = {
+        platform: state.platform,
+        crawler_type: state.crawlerType,
+        keywords: kwList.join(','),
+        specified_ids: idList.join(','),
+        creator_ids: creatorList.join(','),
+        max_notes_count: maxNotes,
+        max_comments_count: maxComments,
+        enable_comments: state.enableComment,
+        enable_get_medias: state.enableMedia,
+        save_data_path: savePath,
+        headless: false,
+        login_type: 'qrcode',
+        save_option: 'jsonl',
+    };
+
+    try {
+        const resp = await fetch('/api/crawler/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+        });
+        const data = await resp.json();
+        if (!resp.ok) {
+            alert('启动失败: ' + (data.detail || JSON.stringify(data)));
+        }
+    } catch (e) {
+        alert('请求失败: ' + e.message);
+    }
+}
+
+async function stopCrawler() {
+    try {
+        const resp = await fetch('/api/crawler/stop', { method: 'POST' });
+        if (!resp.ok) {
+            const data = await resp.json();
+            alert('停止失败: ' + (data.detail || ''));
+        }
+    } catch (e) {
+        alert('请求失败: ' + e.message);
+    }
+}
+
+// ===================== 初始化 =====================
+initPlatformGrid();
+initToggleGroups();
+
+// 监听保存路径变化
+document.getElementById('saveDataPath').addEventListener('input', updateOutputInfo);
+document.getElementById('maxNotesCount').addEventListener('change', updateProgressBar);
+document.getElementById('keywordsInput').addEventListener('input', updateProgressBar);
+
+// 连接 WebSocket
+connectWebSocket();
+
+// 初始输出信息
+updateOutputInfo();
+updateProgressBar();
+</script>
+</body>
 </html>
