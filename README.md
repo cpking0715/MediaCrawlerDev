@@ -39,15 +39,15 @@
 
 
 ## ✨ 功能特性
-| 平台   | 关键词搜索 | 指定帖子ID爬取 | 二级评论 | 指定创作者主页 | 登录态缓存 | IP代理池 | 生成评论词云图 |
-| ------ | ---------- | -------------- | -------- | -------------- | ---------- | -------- | -------------- |
-| 小红书 | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 抖音   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 快手   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| B 站   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 微博   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 贴吧   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
-| 知乎   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              |
+| 平台   | 关键词搜索 | 指定帖子ID爬取 | 二级评论 | 指定创作者主页 | 登录态缓存 | IP代理池 | 生成评论词云图 | 视频/媒体下载 |
+| ------ | ---------- | -------------- | -------- | -------------- | ---------- | -------- | -------------- | ------------- |
+| 小红书 | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              | ✅             |
+| 抖音   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              | ✅             |
+| 快手   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              | ✅             |
+| B 站   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              | ✅             |
+| 微博   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              | ✅             |
+| 贴吧   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              | ✅             |
+| 知乎   | ✅          | ✅              | ✅        | ✅              | ✅          | ✅        | ✅              | ✅             |
 
 
 
@@ -137,12 +137,19 @@ uv run playwright install
 
 ```shell
 # 在 config/base_config.py 查看配置项目功能，写的有中文注释
+# 关键词支持两种方式指定：
+#   1. 直接配置：在 base_config.py 中设置 KEYWORDS = "关键词1,关键词2"
+#   2. 文件配置：在项目根目录创建 keywords.txt，每行一个关键词（优先于 KEYWORDS）
 
 # 从配置文件中读取关键词搜索相关的帖子并爬取帖子信息与评论
-uv run main.py --platform xhs --lt qrcode --type search
+# --get_medias true 开启视频/图片媒体文件下载
+uv run main.py --platform dy --lt qrcode --type search --get_medias true
 
 # 从配置文件中读取指定的帖子ID列表获取指定帖子的信息与评论信息
-uv run main.py --platform xhs --lt qrcode --type detail
+uv run main.py --platform dy --lt qrcode --type detail --get_medias true
+
+# 自定义数据保存路径
+uv run main.py --platform dy --save_data_path "D:/videos"
 
 # 打开对应APP扫二维码登录
 
@@ -169,13 +176,21 @@ uv run python -m api.main
 
 #### WebUI 功能特性
 
-- 可视化配置爬虫参数（平台、登录方式、爬取类型等）
-- 实时查看爬虫运行状态和日志
-- 数据预览和导出
+- **平台快速切换**：小红书 / 抖音 / 快手 / B站 / 微博 / 贴吧 / 知乎，一键选择
+- **多种爬取模式**：搜索模式、详情模式、创作者主页模式
+- **🎬 视频下载开关**：开启后自动下载视频/图片媒体文件到 data/{platform}/videos/ 目录
+- **自定义保存路径**：可指定数据保存位置（默认 data/ 目录）
+- **可视化配置**：设置关键词列表、爬取数量、评论数量等参数
+- **实时查看**：运行状态、爬取进度、WebSocket 实时日志
+- **进度追踪**：已处理视频数、目标总数、运行时间、当前关键词
 
 #### 界面预览
 
-<img src="docs/static/images/img_8.png" alt="WebUI 界面预览">
+全新的深色主题 WebUI，整合了所有爬虫控制功能于一个页面：
+
+- **左侧配置面板**：平台选择 → 爬取模式 → 关键词/ID输入 → 数量配置 → 选项开关 → 开始/停止
+- **右侧日志面板**：WebSocket 实时日志流，支持日志级别颜色区分
+- **进度面板**：进度条、已处理/目标视频数、运行时间、当前关键词
 
 </details>
 
@@ -234,6 +249,41 @@ python main.py --help
 
 </details>
 
+
+
+## 🎬 视频/媒体下载
+
+此 Fork 版本默认开启了视频和图片媒体文件的自动下载功能（`ENABLE_GET_MEIDAS = True`）。
+
+### 功能说明
+
+- 爬取帖子时，自动下载其中的视频（MP4）和图片资源
+- 下载的媒体文件保存在 `data/{platform}/videos/{帖子的唯一ID}/` 目录
+- 例如抖音的视频保存路径：`data/douyin/videos/{视频ID}/video.mp4`
+- 同时生成结构化元数据（支持 CSV / JSON / JSONL / Excel 等格式）
+
+### 配置方式
+
+在 `config/base_config.py` 中：
+
+```python
+ENABLE_GET_MEIDAS = True   # True 开启媒体下载，False 关闭
+CRAWLER_MAX_NOTES_COUNT = 2  # 控制下载的视频数量
+```
+
+### 命令行参数
+
+```shell
+# 开启媒体下载
+uv run main.py --platform dy --get_medias true
+
+# 指定保存路径
+uv run main.py --platform dy --get_medias true --save_data_path "D:/videos"
+```
+
+### WebUI 操作
+
+在 WebUI 控制台中，通过 **🎬 下载视频** 开关一键开启/关闭媒体下载，并可在 **保存位置** 字段自定义输出路径。
 
 ## 💾 数据保存
 
