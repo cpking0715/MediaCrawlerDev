@@ -1,16 +1,14 @@
 # 🔥 MediaCrawler - 自媒体平台爬虫 🕷️
+> **Fork 定制版**：基于 [NanmiCoder/MediaCrawler](https://github.com/NanmiCoder/MediaCrawler) 的个性化定制分支，包含前端界面定制等优化。
+
 
 <div align="center">
 
-<a href="https://trendshift.io/repositories/8291" target="_blank">
-  <img src="https://trendshift.io/api/badge/repositories/8291" alt="NanmiCoder%2FMediaCrawler | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
-</a>
-
-[![GitHub Stars](https://img.shields.io/github/stars/NanmiCoder/MediaCrawler?style=social)](https://github.com/NanmiCoder/MediaCrawler/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/NanmiCoder/MediaCrawler?style=social)](https://github.com/NanmiCoder/MediaCrawler/network/members)
-[![GitHub Issues](https://img.shields.io/github/issues/NanmiCoder/MediaCrawler)](https://github.com/NanmiCoder/MediaCrawler/issues)
-[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/NanmiCoder/MediaCrawler)](https://github.com/NanmiCoder/MediaCrawler/pulls)
-[![License](https://img.shields.io/github/license/NanmiCoder/MediaCrawler)](https://github.com/NanmiCoder/MediaCrawler/blob/main/LICENSE)
+[![GitHub Stars](https://img.shields.io/github/stars/cpking0715/MediaCrawlerDev?style=social)](https://github.com/cpking0715/MediaCrawlerDev/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/cpking0715/MediaCrawlerDev?style=social)](https://github.com/cpking0715/MediaCrawlerDev/network/members)
+[![GitHub Issues](https://img.shields.io/github/issues/cpking0715/MediaCrawlerDev)](https://github.com/cpking0715/MediaCrawlerDev/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/cpking0715/MediaCrawlerDev)](https://github.com/cpking0715/MediaCrawlerDev/pulls)
+[![License](https://img.shields.io/github/license/cpking0715/MediaCrawlerDev)](https://github.com/cpking0715/MediaCrawlerDev/blob/main/LICENSE)
 [![中文](https://img.shields.io/badge/🇨🇳_中文-当前-blue)](README.md)
 [![English](https://img.shields.io/badge/🇺🇸_English-Available-green)](README_en.md)
 [![Español](https://img.shields.io/badge/🇪🇸_Español-Available-green)](README_es.md)
@@ -254,7 +252,7 @@ MediaCrawler 支持多种数据存储方式，包括 CSV、JSON、JSONL、Excel�
 
 ## 💰 赞助商展示
 
-<a href="https://tikhub.io/?utm_source=github.com/NanmiCoder/MediaCrawler&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad">
+<a href="https://tikhub.io/?utm_source=github.com/cpking0715/MediaCrawlerDev&utm_medium=marketing_social&utm_campaign=retargeting&utm_content=carousel_ad">
 <img width="500" src="docs/static/images/tikhub_banner_zh.png">
 <br>
 TikHub.io 提供 900+ 高稳定性数据接口，覆盖 TK、DY、XHS、Y2B、Ins、X 等 14+ 海内外主流平台，支持用户、内容、商品、评论等多维度公开数据 API，并配套 4000 万+ 已清洗结构化数据集，使用邀请码 <code>cfzyejV9</code> 注册并充值，即可额外获得 $2 赠送额度。
@@ -315,7 +313,7 @@ TikHub.io 提供 900+ 高稳定性数据接口，覆盖 TK、DY、XHS、Y2B、In
 
 如果这个项目对您有帮助，请给个 ⭐ Star 支持一下，让更多的人看到 MediaCrawler！
 
-[![Star History Chart](https://api.star-history.com/svg?repos=NanmiCoder/MediaCrawler&type=Date)](https://star-history.com/#NanmiCoder/MediaCrawler&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=cpking0715/MediaCrawlerDev&type=Date)](https://star-history.com/#cpking0715/MediaCrawlerDev&Date)
 
 
 ## 📚 参考
