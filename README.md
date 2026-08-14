@@ -195,6 +195,27 @@ uv run python -m api.main
 </details>
 
 <details>
+<summary>📊 <strong>个人工作台：每日定时采集 + 数据分析</strong></summary>
+
+在采集能力之上封装的定时工作台：每天定时抓取各平台信息入库，并提供趋势、热门、词频分析与可视化仪表盘。
+
+```shell
+# 1. 首次使用：初始化 SQLite 表结构
+uv run python main.py --init_db sqlite
+
+# 2. 启动工作台（API + 调度器 + 仪表盘，默认每天 08:00 自动采集）
+uv run uvicorn api.main:app --port 8080
+```
+
+- 仪表盘：`http://localhost:8080/dashboard`
+- 默认每日采集平台：小红书 / 抖音 / B站，配置见 `workbench/config.py`
+- 注意：各平台 Cookie 会过期，过期后当日任务会失败并在仪表盘告警，需手动补登录
+
+详细配置与 API 说明见 [workbench/README.md](workbench/README.md)。
+
+</details>
+
+<details>
 <summary>🔗 <strong>使用 Python 原生 venv 管理环境（不推荐）</strong></summary>
 
 #### 创建并激活 Python 虚拟环境

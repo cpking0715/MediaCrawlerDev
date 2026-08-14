@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaCrawler 工作台</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"
+        integrity="sha384-o5uz97et3bErHvpKfD4Jz4n0JfhJDWABFuF4NP+iEEDxE1VwMWJ19QGR0lqFZnr6"
+        crossorigin="anonymous"></script>
+<style>
+  :root {
+    --bg: #0f1419; --card: #1a2129; --border: #2a3441;
+    --text: #e6edf3; --muted: #8b98a9; --accent: #4d9fff;
+    --green: #3fb950; --red: #f85149; --yellow: #d29922;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", "Microsoft YaHei", sans-serif; padding: 20px; }
+  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+  .header h1 { font-size: 22px; }
+  .header .sub { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .btn { background: var(--accent); color: #fff; border: none; border-radius: 6px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+  .btn:hover { opacity: .85; }
+  .btn:disabled { background: #3a4450; cursor: not-allowed; }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+  .grid { display: grid; gap: 16px; }
+  .cards { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 16px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .card .label { color: var(--muted); font-size: 13px; }
+  .card .value { font-size: 26px; font-weight: 700; margin: 6px 0 2px; }
+  .card .extra { color: var(--muted); font-size: 12px; }
+  .card .extra b { color: var(--green); }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .panel h2 { font-size: 15px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .panel h2 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .cols { grid-template-columns: 1fr; } }
+  .chart { width: 100%; height: 300px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 500; }
+  td a { color: var(--accent); text-decoration: none; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+  .tag.success { background: rgba(63,185,80,.15); color: var(--green); }
+  .tag.failed, .tag.timeout { background: rgba(248,81,73,.15); color: var(--red); }
+  .tag.running { background: rgba(210,153,34,.15); color: var(--yellow); }
+  .alert { background: rgba(248,81,73,.12); border: 1px solid var(--red); color: var(--red); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; font-size: 13px; display: none; }
+  .muted { color: var(--muted); }
+  select, input[type=text] { background: var(--bg); color: var(--text); border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; vertical-align: middle; background: var(--border); }
+  .role-tag { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 11px; margin-right: 4px; }
+  .role-author { background: rgba(77,159,255,.15); color: var(--accent); }
+  .role-commenter { background: rgba(63,185,80,.15); color: var(--green); }
+  .user-row { cursor: pointer; }
+  .user-row:hover { background: rgba(77,159,255,.06); }
+  .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: none; align-items: flex-start; justify-content: center; z-index: 50; padding: 40px 20px; overflow: auto; }
+  .modal { background: var(--card); border: 1px solid var(--border); border-radius: 12px; width: 860px; max-width: 100%; padding: 20px; }
+  .modal h3 { font-size: 16px; margin-bottom: 4px; }
+  .modal .close-btn { float: right; cursor: pointer; color: var(--muted); font-size: 20px; line-height: 1; }
+  .profile-head { display: flex; gap: 14px; align-items: center; margin-bottom: 14px; }
+  .profile-head img { width: 56px; height: 56px; border-radius: 50%; }
+  .modal h4 { font-size: 13px; color: var(--muted); margin: 14px 0 6px; }
+  .modal table { max-height: 260px; display: block; overflow: auto; }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>MediaCrawler 个人工作台</h1>
+      <div class="sub" id="scheduler-info">调度状态加载中...</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn ghost" onclick="refreshAll()">刷新</button>
+      <button class="btn" id="run-all-btn" onclick="runAll()">立即采集全部平台</button>
+    </div>
+  </div>
+
+  <div class="alert" id="login-alert"></div>
+
+  <div class="grid cards" id="summary-cards"></div>
+
+  <div class="panel">
+    <h2>关键词相关用户 <span class="muted" style="font-weight:400;font-size:12px;">（谁在发布/讨论你关心的内容，点击查看画像）</span>
+      <span class="actions">
+        <select id="user-keyword"></select>
+        <select id="user-platform">
+          <option value="">全部平台</option>
+          <option value="xhs">小红书</option>
+          <option value="dy">抖音</option>
+          <option value="bili">B站</option>
+        </select>
+        <select id="user-days">
+          <option value="7">近 7 天</option>
+          <option value="30" selected>近 30 天</option>
+          <option value="90">近 90 天</option>
+        </select>
+        <button class="btn ghost" onclick="loadUsers()">查询</button>
+      </span>
+    </h2>
+    <table>
+      <thead><tr><th>用户</th><th>平台</th><th>角色</th><th>作品</th><th>评论</th><th>获赞</th><th>IP</th><th>最近动态</th></tr></thead>
+      <tbody id="users-body"></tbody>
+    </table>
+  </div>
+
+  <div class="modal-mask" id="profile-mask" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal" id="profile-box"></div>
+  </div>
+
+  <div class="panel">
+    <h2>产品方向赛道热度 <span class="muted" style="font-weight:400;font-size:12px;">（vibe coding 各产品方向的热度与爆点，点击查看爆款详情）</span>
+      <span class="actions">
+        <select id="topic-days">
+          <option value="30">近 30 天</option>
+          <option value="90" selected>近 90 天</option>
+          <option value="180">近 180 天</option>
+        </select>
+        <button class="btn ghost" onclick="loadTopics()">刷新</button>
+      </span>
+    </h2>
+    <table>
+      <thead><tr><th>赛道</th><th>内容</th><th>评论</th><th>总赞</th><th>平均赞</th><th>平台</th><th>机会提示</th></tr></thead>
+      <tbody id="topics-body"></tbody>
+    </table>
+  </div>
+
+  <div class="cols">
+    <div class="panel">
+      <h2>近 14 天采集趋势</h2>
+      <div class="chart" id="trend-chart"></div>
+    </div>
+    <div class="panel">
+      <h2>近 7 天关键词词频 Top 20</h2>
+      <div class="chart" id="keyword-chart"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>热门内容 Top 20 <span class="muted" style="font-weight:400;font-size:12px;">（近30天采集，按点赞数）</span></h2>
+    <table>
+      <thead><tr><th>#</th><th>平台</th><th>标题</th><th>作者</th><th>点赞</th></tr></thead>
+      <tbody id="hot-body"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>采集任务历史
+      <span class="actions" id="run-buttons"></span>
+    </h2>
+    <table>
+      <thead><tr><th>时间</th><th>平台</th><th>触发</th><th>状态</th><th>退出码</th><th>新增条数</th><th>耗时</th></tr></thead>
+      <tbody id="runs-body"></tbody>
+    </table>
+  </div>
+
+<script>
+const PLATFORM_LABELS = { xhs: "小红书", dy: "抖音", bili: "B站", ks: "快手", wb: "微博", tieba: "贴吧", zhihu: "知乎" };
+const COLORS = { xhs: "#ff5c8a", dy: "#4d9fff", bili: "#00c0d8", ks: "#ffb02e", wb: "#f85149", tieba: "#3fb950", zhihu: "#8b98a9" };
+let trendChart, keywordChart;
+
+async function api(path, options) {
+  const resp = await fetch("/api" + path, options);
+  if (!resp.ok) throw new Error(`${path} -> ${resp.status}`);
+  return resp.json();
+}
+
+function fmtTime(ts) {
+  if (!ts) return "-";
+  return new Date(ts).toLocaleString("zh-CN", { hour12: false });
+}
+
+function escapeHtml(s) {
+  const div = document.createElement("div");
+  div.textContent = s || "";
+  return div.innerHTML;
+}
+
+async function loadScheduler() {
+  try {
+    const s = await api("/schedule/status");
+    const runningText = s.running ? `采集中: ${PLATFORM_LABELS[s.current_platform] || s.current_platform}` : "空闲";
+    document.getElementById("scheduler-info").textContent =
+      `每日 ${s.daily_time} 自动采集 [${s.platforms.map(p => PLATFORM_LABELS[p] || p).join(", ")}] | 下次运行: ${s.next_run_time || "-"} | ${runningText}`;
+    document.getElementById("run-all-btn").disabled = s.running;
+    const btnBox = document.getElementById("run-buttons");
+    btnBox.innerHTML = s.platforms.map(p =>
+      `<button class="btn ghost" ${s.running ? "disabled" : ""} onclick="runPlatform('${p}')">采集 ${PLATFORM_LABELS[p] || p}</button>`
+    ).join("");
+    // 用户查询的关键词下拉（来自工作台配置的采集关键词）
+    const kwSelect = document.getElementById("user-keyword");
+    if (kwSelect && kwSelect.options.length === 0 && s.keywords) {
+      const kws = s.keywords.split(",").map(k => k.trim()).filter(Boolean);
+      kwSelect.innerHTML = `<option value="">全部（不限关键词）</option>` +
+        kws.map(k => `<option value="${escapeHtml(k)}">${escapeHtml(k)}</option>`).join("");
+    }
+  } catch (e) {
+    document.getElementById("scheduler-info").textContent = "调度状态获取失败: " + e.message;
+  }
+}
+
+async function loadSummary() {
+  const data = await api("/analysis/summary");
+  const box = document.getElementById("summary-cards");
+  let failedToday = [];
+  box.innerHTML = data.platforms.map(p => `
+    <div class="card">
+      <div class="label">${p.label} 数据量</div>
+      <div class="value">${p.note_total}</div>
+      <div class="extra">今日新增 <b>+${p.note_today}</b> 内容 / +${p.comment_today} 评论（评论总量 ${p.comment_total}）</div>
+    </div>`).join("");
+}
+
+async function loadTrends() {
+  const data = await api("/analysis/trends?days=14");
+  trendChart.setOption({
+    backgroundColor: "transparent",
+    tooltip: { trigger: "axis" },
+    legend: { textStyle: { color: "#8b98a9" } },
+    grid: { left: 40, right: 16, top: 36, bottom: 28 },
+    xAxis: { type: "category", data: data.dates, axisLabel: { color: "#8b98a9" } },
+    yAxis: { type: "value", axisLabel: { color: "#8b98a9" }, splitLine: { lineStyle: { color: "#2a3441" } } },
+    series: Object.entries(data.series).map(([p, values]) => ({
+      name: PLATFORM_LABELS[p] || p, type: "line", smooth: true, data: values,
+      itemStyle: { color: COLORS[p] || "#4d9fff" },
+    })),
+  });
+}
+
+async function loadKeywords() {
+  const data = await api("/analysis/keywords?days=7&top=20");
+  const items = data.words.slice().reverse();
+  keywordChart.setOption({
+    backgroundColor: "transparent",
+    tooltip: {},
+    grid: { left: 90, right: 24, top: 12, bottom: 28 },
+    xAxis: { type: "value", axisLabel: { color: "#8b98a9" }, splitLine: { lineStyle: { color: "#2a3441" } } },
+    yAxis: { type: "category", data: items.map(w => w.word), axisLabel: { color: "#e6edf3" } },
+    series: [{ type: "bar", data: items.map(w => w.count), itemStyle: { color: "#4d9fff", borderRadius: [0, 4, 4, 0] } }],
+  });
+}
+
+async function loadUsers() {
+  const keyword = document.getElementById("user-keyword").value;
+  const platform = document.getElementById("user-platform").value;
+  const days = document.getElementById("user-days").value;
+  const params = new URLSearchParams({ days, limit: 50 });
+  if (keyword) params.set("keyword", keyword);
+  if (platform) params.set("platform", platform);
+  try {
+    const data = await api("/analysis/users?" + params.toString());
+    document.getElementById("users-body").innerHTML = data.users.map(u => `
+      <tr class="user-row" onclick="showProfile('${u.platform}','${encodeURIComponent(u.user_id)}')">
+        <td>
+          ${u.avatar ? `<img class="avatar" src="${escapeHtml(u.avatar)}" loading="lazy" onerror="this.style.display='none'">` : ""}
+          <b>${escapeHtml(u.nickname || u.user_id)}</b>
+          ${u.home_url ? `<a href="${escapeHtml(u.home_url)}" target="_blank" onclick="event.stopPropagation()" class="muted" style="font-size:12px;">↗主页</a>` : ""}
+          ${u.signature ? `<div class="muted" style="font-size:12px;">${escapeHtml(u.signature.slice(0, 40))}</div>` : ""}
+        </td>
+        <td><span class="tag" style="background:${COLORS[u.platform]}22;color:${COLORS[u.platform]}">${u.label}</span></td>
+        <td>${u.roles.map(r => `<span class="role-tag role-${r}">${r === "author" ? "发布者" : "评论者"}</span>`).join("")}</td>
+        <td>${u.note_count}</td>
+        <td>${u.comment_count}</td>
+        <td>${u.total_liked}</td>
+        <td class="muted">${escapeHtml(u.ip_location || "-")}</td>
+        <td class="muted">${fmtTime(u.last_active_ts)}</td>
+      </tr>`).join("") || `<tr><td colspan="8" class="muted">暂无相关用户（先确认已采集过该关键词，或放宽时间范围/清空关键词）</td></tr>`;
+  } catch (e) {
+    document.getElementById("users-body").innerHTML = `<tr><td colspan="8" class="muted">加载失败: ${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+async function showProfile(platform, encodedUserId) {
+  const mask = document.getElementById("profile-mask");
+  const box = document.getElementById("profile-box");
+  mask.style.display = "flex";
+  box.innerHTML = `<span class="close-btn" onclick="document.getElementById('profile-mask').style.display='none'">✕</span><p class="muted">加载中...</p>`;
+  try {
+    const p = await api(`/analysis/user_profile?platform=${platform}&user_id=${encodedUserId}`);
+    box.innerHTML = `
+      <span class="close-btn" onclick="document.getElementById('profile-mask').style.display='none'">✕</span>
+      <div class="profile-head">
+        ${p.avatar ? `<img src="${escapeHtml(p.avatar)}" onerror="this.style.display='none'">` : ""}
+        <div>
+          <h3>${escapeHtml(p.nickname || p.user_id)}
+            ${p.home_url ? `<a href="${escapeHtml(p.home_url)}" target="_blank" style="font-size:13px;color:var(--accent);text-decoration:none;">↗ 平台主页</a>` : ""}
+          </h3>
+          <div class="muted" style="font-size:13px;">
+            ${p.label} | ID: ${escapeHtml(p.user_id)}
+            ${p.fans != null ? ` | 粉丝 ${p.fans}` : ""}
+            ${p.ip_location ? ` | IP ${escapeHtml(p.ip_location)}` : ""}
+          </div>
+          ${p.signature ? `<div class="muted" style="font-size:12px;margin-top:2px;">${escapeHtml(p.signature)}</div>` : ""}
+        </div>
+      </div>
+      <h4>已采集的作品（${p.notes.length}）</h4>
+      <table>
+        <thead><tr><th>标题</th><th>点赞</th><th>发布时间</th><th>采集来源词</th></tr></thead>
+        <tbody>${p.notes.map(n => `<tr>
+          <td>${n.url ? `<a href="${escapeHtml(n.url)}" target="_blank">${escapeHtml(n.title)}</a>` : escapeHtml(n.title)}</td>
+          <td>${n.liked_count}</td>
+          <td class="muted">${fmtTime(n.create_time_ms)}</td>
+          <td class="muted">${escapeHtml(n.source_keyword || "-")}</td>
+        </tr>`).join("") || `<tr><td colspan="4" class="muted">暂无作品数据</td></tr>`}</tbody>
+      </table>
+      <h4>已采集的评论（${p.comments.length}）</h4>
+      <table>
+        <thead><tr><th>评论内容</th><th>被评论作品</th><th>时间</th></tr></thead>
+        <tbody>${p.comments.map(c => `<tr>
+          <td>${escapeHtml(c.content)}</td>
+          <td class="muted">${escapeHtml(c.ref_title || "-")}</td>
+          <td class="muted">${fmtTime(c.create_time_ms)}</td>
+        </tr>`).join("") || `<tr><td colspan="3" class="muted">暂无评论数据</td></tr>`}</tbody>
+      </table>
+      <p class="muted" style="font-size:12px;margin-top:10px;">提示：仅展示已采集到的数据。如需该用户更多内容，可用 creator 模式针对其主页补采。</p>`;
+  } catch (e) {
+    box.innerHTML = `<span class="close-btn" onclick="document.getElementById('profile-mask').style.display='none'">✕</span><p class="muted">加载失败: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+let topicCache = [];
+
+async function loadTopics() {
+  const days = document.getElementById("topic-days").value;
+  try {
+    const data = await api(`/analysis/topic_heat?days=${days}&top=5`);
+    topicCache = data.topics;
+    document.getElementById("topics-body").innerHTML = data.topics.map((t, i) => `
+      <tr class="user-row" onclick="showTopic(${i})">
+        <td>
+          <b>${escapeHtml(t.name)}</b>
+          ${t.hot_words.length ? `<div class="muted" style="font-size:12px;">热词: ${t.hot_words.slice(0, 5).map(w => escapeHtml(w.word)).join(" / ")}</div>` : ""}
+        </td>
+        <td>${t.note_count}</td>
+        <td>${t.comment_count}</td>
+        <td>${t.total_liked}</td>
+        <td>${t.avg_liked}</td>
+        <td class="muted">${t.platforms.map(p => PLATFORM_LABELS[p] || p).join(", ") || "-"}</td>
+        <td class="muted" style="font-size:12px;">${escapeHtml(t.hint)}</td>
+      </tr>`).join("") || `<tr><td colspan="7" class="muted">暂无数据</td></tr>`;
+  } catch (e) {
+    document.getElementById("topics-body").innerHTML = `<tr><td colspan="7" class="muted">加载失败: ${escapeHtml(e.message)}</td></tr>`;
+  }
+}
+
+function showTopic(i) {
+  const t = topicCache[i];
+  if (!t) return;
+  const box = document.getElementById("profile-box");
+  box.innerHTML = `
+    <span class="close-btn" onclick="document.getElementById('profile-mask').style.display='none'">✕</span>
+    <div class="profile-head">
+      <div>
+        <h3>${escapeHtml(t.name)}</h3>
+        <div class="muted" style="font-size:13px;">内容 ${t.note_count} 条 | 评论 ${t.comment_count} 条 | 总赞 ${t.total_liked} | 平均赞 ${t.avg_liked}</div>
+        <div class="muted" style="font-size:12px;margin-top:2px;">${escapeHtml(t.hint)}</div>
+      </div>
+    </div>
+    ${t.hot_words.length ? `<h4>赛道高频词（爆点线索）</h4>
+      <div>${t.hot_words.map(w => `<span class="role-tag role-author">${escapeHtml(w.word)} ×${w.count}</span>`).join("")}</div>` : ""}
+    <h4>头部爆款内容（${t.top_items.length}）</h4>
+    <table>
+      <thead><tr><th>标题</th><th>平台</th><th>作者</th><th>点赞</th><th>来源词</th></tr></thead>
+      <tbody>${t.top_items.map(it => `<tr>
+        <td>${it.url ? `<a href="${escapeHtml(it.url)}" target="_blank">${escapeHtml(it.title)}</a>` : escapeHtml(it.title)}</td>
+        <td><span class="tag" style="background:${COLORS[it.platform]}22;color:${COLORS[it.platform]}">${it.label}</span></td>
+        <td class="muted">${escapeHtml(it.author)}</td>
+        <td>${it.liked_count}</td>
+        <td class="muted">${escapeHtml(it.source_keyword || "-")}</td>
+      </tr>`).join("") || `<tr><td colspan="5" class="muted">暂无内容</td></tr>`}</tbody>
+    </table>
+    <h4>高赞评论（${t.top_comments.length}）</h4>
+    <table>
+      <thead><tr><th>评论内容</th><th>平台</th><th>赞</th></tr></thead>
+      <tbody>${t.top_comments.map(c => `<tr>
+        <td>${escapeHtml(c.content)}</td>
+        <td><span class="tag" style="background:${COLORS[c.platform]}22;color:${COLORS[c.platform]}">${c.label}</span></td>
+        <td>${c.like_count}</td>
+      </tr>`).join("") || `<tr><td colspan="3" class="muted">暂无评论</td></tr>`}</tbody>
+    </table>
+    <p class="muted" style="font-size:12px;margin-top:10px;">提示：赛道归类与命中词可在 workbench/topics.py 中自行调整。</p>`;
+  document.getElementById("profile-mask").style.display = "flex";
+}
+
+async function loadHot() {
+  const data = await api("/analysis/hot?limit=20&days=30");
+  document.getElementById("hot-body").innerHTML = data.items.map((it, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td><span class="tag" style="background:${COLORS[it.platform]}22;color:${COLORS[it.platform]}">${it.label}</span></td>
+      <td>${it.url ? `<a href="${escapeHtml(it.url)}" target="_blank">${escapeHtml(it.title)}</a>` : escapeHtml(it.title)}</td>
+      <td class="muted">${escapeHtml(it.author)}</td>
+      <td>${it.liked_count}</td>
+    </tr>`).join("") || `<tr><td colspan="5" class="muted">暂无数据</td></tr>`;
+}
+
+async function loadRuns() {
+  const data = await api("/schedule/runs?limit=30");
+  const alertBox = document.getElementById("login-alert");
+  const failed = data.runs.filter(r => (r.status === "failed" || r.status === "timeout"));
+  if (failed.length > 0) {
+    const latest = failed[0];
+    alertBox.style.display = "block";
+    alertBox.textContent =
+      `警告: 最近有 ${failed.length} 次采集失败/超时（最近: ${PLATFORM_LABELS[latest.platform] || latest.platform}, ${fmtTime(latest.started_at)}）。` +
+      `常见原因是登录 Cookie 过期，请手动重新登录后重试。`;
+  } else {
+    alertBox.style.display = "none";
+  }
+  document.getElementById("runs-body").innerHTML = data.runs.map(r => {
+    const duration = r.finished_at && r.started_at ? Math.round((r.finished_at - r.started_at) / 1000) + "s" : "-";
+    return `<tr title="${escapeHtml(r.log_tail || "")}">
+      <td>${fmtTime(r.started_at)}</td>
+      <td>${PLATFORM_LABELS[r.platform] || r.platform}</td>
+      <td class="muted">${r.trigger === "cron" ? "定时" : "手动"}</td>
+      <td><span class="tag ${r.status}">${r.status}</span></td>
+      <td>${r.exit_code ?? "-"}</td>
+      <td>${r.records_added}</td>
+      <td>${duration}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="7" class="muted">暂无运行记录</td></tr>`;
+}
+
+async function runPlatform(p) {
+  if (!confirm(`确认立即采集 ${PLATFORM_LABELS[p] || p}？`)) return;
+  await api(`/schedule/run/${p}`, { method: "POST" });
+  setTimeout(refreshAll, 1500);
+}
+
+async function runAll() {
+  if (!confirm("确认立即执行全部平台的每日采集？")) return;
+  await api("/schedule/run", { method: "POST" });
+  setTimeout(refreshAll, 1500);
+}
+
+async function refreshAll() {
+  trendChart = trendChart || echarts.init(document.getElementById("trend-chart"));
+  keywordChart = keywordChart || echarts.init(document.getElementById("keyword-chart"));
+  await loadScheduler();
+  const tasks = [loadSummary, loadTrends, loadKeywords, loadUsers, loadTopics, loadHot, loadRuns];
+  await Promise.allSettled(tasks.map(fn => fn()));
+}
+
+refreshAll();
+setInterval(refreshAll, 60000);
+window.addEventListener("resize", () => { trendChart && trendChart.resize(); keywordChart && keywordChart.resize(); });
+</script>
+</body>
+</html>

@@ -166,6 +166,9 @@ cython_debug/
 /browser_data/
 /data/
 
+# 嵌套的上游项目副本（独立 git 仓库，勿整体提交）
+/MediaCrawler/
+
 */.DS_Store
 .vscode
 /node_modules
